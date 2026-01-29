@@ -29,7 +29,7 @@ RUN --mount=type=cache,target="/var/cache/apt",sharing=locked \
     apt-get upgrade -y; \
     apt-get install --no-install-recommends -y \
         git \
-        libgl1-mesa-glx \
+        libgl1 \
         libglib2.0-0 \
         libsm6 \
         libxext6 \
