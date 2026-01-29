@@ -1,0 +1,8 @@
+# PaddleOCR and dependencies
+paddleocr>=3.0.0
+paddlepaddle>=3.0.0  # Use paddlepaddle-gpu for GPU support
+
+# Image processing
+opencv-python-headless>=4.5.0
+Pillow>=9.0.0
+numpy<2

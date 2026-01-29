@@ -1,0 +1,94 @@
+version: "3.8"
+
+services:
+  paddleocr:
+    container_name: paddleocr
+    image: heartexlabs/label-studio-ml-backend:paddleocr-master
+    init: true
+    build:
+      context: .
+      args:
+        TEST_ENV: ${TEST_ENV}
+    environment:
+      # Basic auth for the model server (optional)
+      - BASIC_AUTH_USER=
+      - BASIC_AUTH_PASS=
+
+      # Logging level
+      - LOG_LEVEL=INFO
+
+      # Number of workers and threads for the model server
+      - WORKERS=1
+      - THREADS=8
+
+      # Model directory
+      - MODEL_DIR=/data/models
+
+      # Label Studio field configuration
+      - IMAGE_DATA_KEY=image
+      - IMAGE_TO_NAME=image
+      - BBOX_FROM_NAME=bbox
+      - LABEL_FROM_NAME=label
+      - TEXT_FROM_NAME=transcription
+      - PREDICTED_LABEL=Text
+
+      # PaddleOCR configuration
+      # OCR version: PP-OCRv5 (recommended) or PP-OCRv4
+      - PADDLEOCR_VERSION=PP-OCRv5
+      # Model type: server (high accuracy) or mobile (lightweight)
+      - PADDLEOCR_MODEL_TYPE=server
+      # Language: ch, en, japan, korean, arabic, cyrillic, devanagari, latin
+      - PADDLEOCR_LANG=ch
+      # GPU support (requires paddlepaddle-gpu and nvidia runtime)
+      - PADDLEOCR_USE_GPU=false
+      # Optional preprocessing features
+      - PADDLEOCR_USE_DOC_ORIENTATION=false
+      - PADDLEOCR_USE_DOC_UNWARPING=false
+      - PADDLEOCR_USE_TEXTLINE_ORIENTATION=true
+      # Minimum confidence score threshold (0.0-1.0)
+      - PADDLEOCR_SCORE_THRESHOLD=0.5
+
+      # Label Studio connection
+      # Do not use 'localhost' as it does not work within Docker containers.
+      # Use prefix 'http://' or 'https://' for the URL always.
+      # Determine the actual IP using 'ifconfig' (Linux/Mac) or 'ipconfig' (Windows).
+      - LABEL_STUDIO_URL=${LABEL_STUDIO_URL:-http://host.docker.internal:8080}
+      - LABEL_STUDIO_API_KEY=${LABEL_STUDIO_API_KEY:-}
+
+    ports:
+      - "9090:9090"
+    volumes:
+      # Mount local files directory if using local storage in Label Studio
+      - "./data/server:/data"
+      - "./data/.file-cache:/data/models/.file-cache"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  # Optional: Label Studio service for complete setup
+  label-studio:
+    image: heartexlabs/label-studio:latest
+    container_name: label-studio
+    ports:
+      - "8080:8080"
+    environment:
+      - LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED=true
+      - LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT=/label-studio/data
+    volumes:
+      - label-studio-data:/label-studio/data
+      - ./data/local-files:/label-studio/data/local-files:ro
+    depends_on:
+      - paddleocr
+    profiles:
+      - with-label-studio
+
+volumes:
+  label-studio-data:
+
+networks:
+  default:
+    name: paddleocr-label-studio-network
