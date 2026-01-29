@@ -221,17 +221,21 @@ class PaddleOCR(LabelStudioMLBase):
             logger.warning(f"No image found in task {task.get('id')}")
             return {"result": [], "model_version": self.get("model_version")}
 
-        # Resolve Label Studio task reference to local filepath
-        cache_dir = os.path.join(self.MODEL_DIR, ".file-cache")
-        os.makedirs(cache_dir, exist_ok=True)
+        # Handle local file paths directly
+        if os.path.isabs(image_ref) and os.path.exists(image_ref):
+            image_path = image_ref
+        else:
+            # Resolve Label Studio task reference to local filepath
+            cache_dir = os.path.join(self.MODEL_DIR, ".file-cache")
+            os.makedirs(cache_dir, exist_ok=True)
 
-        image_path = get_local_path(
-            image_ref,
-            cache_dir=cache_dir,
-            hostname=self.LABEL_STUDIO_HOST,
-            access_token=self.LABEL_STUDIO_ACCESS_TOKEN,
-            task_id=task.get("id"),
-        )
+            image_path = get_local_path(
+                image_ref,
+                cache_dir=cache_dir,
+                hostname=self.LABEL_STUDIO_HOST,
+                access_token=self.LABEL_STUDIO_ACCESS_TOKEN,
+                task_id=task.get("id"),
+            )
 
         # Get image dimensions
         img_width, img_height = get_image_size(image_path)
@@ -244,37 +248,38 @@ class PaddleOCR(LabelStudioMLBase):
         all_scores = []
 
         # Handle the result structure from PaddleOCR 3.x
-        if ocr_result and hasattr(ocr_result, "__iter__"):
+        # OCRResult is a dictionary-like object with keys: rec_texts, rec_scores, dt_polys, etc.
+        if ocr_result:
             for res in ocr_result:
-                # Access the OCR result data
-                if hasattr(res, "rec_texts") and hasattr(res, "dt_polys") and hasattr(res, "rec_scores"):
-                    texts = res.rec_texts
-                    polys = res.dt_polys
-                    scores = res.rec_scores
+                # Access the OCR result data using dictionary-style access
+                texts = res.get("rec_texts", []) if hasattr(res, "get") else getattr(res, "rec_texts", [])
+                polys = res.get("dt_polys", []) if hasattr(res, "get") else getattr(res, "dt_polys", [])
+                scores = res.get("rec_scores", []) if hasattr(res, "get") else getattr(res, "rec_scores", [])
 
-                    for text, poly, score in zip(texts, polys, scores):
-                        if score < self.SCORE_THRESHOLD:
-                            continue
+                if not texts:
+                    logger.debug(f"No text found in result: {type(res)}")
+                    continue
 
-                        # Convert polygon to rectangle
-                        quad = poly.tolist() if hasattr(poly, "tolist") else poly
-                        x, y, w, h = quad_to_rect_percent(quad, img_width, img_height)
+                for text, poly, score in zip(texts, polys, scores):
+                    if score < self.SCORE_THRESHOLD:
+                        continue
 
-                        if w <= 0 or h <= 0:
-                            continue
+                    # Convert polygon to rectangle
+                    quad = poly.tolist() if hasattr(poly, "tolist") else poly
+                    x, y, w, h = quad_to_rect_percent(quad, img_width, img_height)
 
-                        region_id = str(uuid.uuid4())[:10]
+                    if w <= 0 or h <= 0:
+                        continue
 
-                        # Add rectangle, label, and transcription results
-                        results.extend(
-                            self._create_region_results(
-                                region_id, x, y, w, h, img_width, img_height, text, float(score)
-                            )
+                    region_id = str(uuid.uuid4())[:10]
+
+                    # Add rectangle, label, and transcription results
+                    results.extend(
+                        self._create_region_results(
+                            region_id, x, y, w, h, img_width, img_height, text, float(score)
                         )
-                        all_scores.append(float(score))
-                else:
-                    # Fallback for different result structures
-                    logger.debug(f"Unexpected result structure: {type(res)}")
+                    )
+                    all_scores.append(float(score))
 
         avg_score = sum(all_scores) / max(len(all_scores), 1) if all_scores else 0.0
 
