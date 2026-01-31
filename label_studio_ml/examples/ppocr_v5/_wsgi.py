@@ -5,32 +5,32 @@ import logging
 import logging.config
 
 logging.config.dictConfig({
-  "version": 1,
-  "disable_existing_loggers": False,
-  "formatters": {
-    "standard": {
-      "format": "[%(asctime)s] [%(levelname)s] [%(name)s::%(funcName)s::%(lineno)d] %(message)s"
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "standard": {
+            "format": "[%(asctime)s] [%(levelname)s] [%(name)s::%(funcName)s::%(lineno)d] %(message)s"
+        }
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "level": os.getenv('LOG_LEVEL', 'INFO'),
+            "stream": "ext://sys.stdout",
+            "formatter": "standard"
+        }
+    },
+    "root": {
+        "level": os.getenv('LOG_LEVEL', 'INFO'),
+        "handlers": [
+            "console"
+        ],
+        "propagate": True
     }
-  },
-  "handlers": {
-    "console": {
-      "class": "logging.StreamHandler",
-      "level": os.getenv('LOG_LEVEL', 'INFO'),
-      "stream": "ext://sys.stdout",
-      "formatter": "standard"
-    }
-  },
-  "root": {
-    "level": os.getenv('LOG_LEVEL', 'INFO'),
-    "handlers": [
-      "console"
-    ],
-    "propagate": True
-  }
 })
 
 from label_studio_ml.api import init_app
-from model import PaddleOCR
+from model import PPOCRv5
 
 
 _DEFAULT_CONFIG_PATH = os.path.join(os.path.dirname(__file__), 'config.json')
@@ -46,7 +46,7 @@ def get_kwargs_from_config(config_path=_DEFAULT_CONFIG_PATH):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='PaddleOCR ML Backend for Label Studio')
+    parser = argparse.ArgumentParser(description='PP-OCRv5 ML Backend for Label Studio')
     parser.add_argument(
         '-p', '--port', dest='port', type=int, default=9090,
         help='Server port')
@@ -68,17 +68,18 @@ if __name__ == "__main__":
     parser.add_argument(
         '--check', dest='check', action='store_true',
         help='Validate model instance before launching server')
-    parser.add_argument('--basic-auth-user',
-                        default=os.environ.get('ML_SERVER_BASIC_AUTH_USER', None),
-                        help='Basic auth user')
-
-    parser.add_argument('--basic-auth-pass',
-                        default=os.environ.get('ML_SERVER_BASIC_AUTH_PASS', None),
-                        help='Basic auth pass')
+    parser.add_argument(
+        '--basic-auth-user',
+        default=os.environ.get('ML_SERVER_BASIC_AUTH_USER', None),
+        help='Basic auth user')
+    parser.add_argument(
+        '--basic-auth-pass',
+        default=os.environ.get('ML_SERVER_BASIC_AUTH_PASS', None),
+        help='Basic auth pass')
 
     args = parser.parse_args()
 
-    # setup logging level
+    # Setup logging level
     if args.log_level:
         logging.root.setLevel(args.log_level)
 
@@ -110,13 +111,17 @@ if __name__ == "__main__":
         kwargs.update(parse_kwargs())
 
     if args.check:
-        print('Check "' + PaddleOCR.__name__ + '" instance creation..')
-        model = PaddleOCR(**kwargs)
+        print('Check "' + PPOCRv5.__name__ + '" instance creation..')
+        model = PPOCRv5(**kwargs)
 
-    app = init_app(model_class=PaddleOCR, basic_auth_user=args.basic_auth_user, basic_auth_pass=args.basic_auth_pass)
+    app = init_app(
+        model_class=PPOCRv5,
+        basic_auth_user=args.basic_auth_user,
+        basic_auth_pass=args.basic_auth_pass
+    )
 
     app.run(host=args.host, port=args.port, debug=args.debug)
 
 else:
-    # for uWSGI/gunicorn use
-    app = init_app(model_class=PaddleOCR)
+    # For uWSGI/gunicorn use
+    app = init_app(model_class=PPOCRv5)
