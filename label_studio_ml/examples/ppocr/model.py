@@ -3,7 +3,7 @@ PP-OCR ML Backend for Label Studio
 
 This module implements a Label Studio ML backend using PaddleX's PP-OCR pipeline
 for text detection and recognition with support for 100+ languages.
-Supports PP-OCRv4, PP-OCRv5, and future versions.
+Tested with PP-OCRv4 and PP-OCRv5, expected to work with future versions.
 """
 
 import logging
@@ -28,11 +28,11 @@ class PPOCR(LabelStudioMLBase):
     PP-OCR ML Backend for Label Studio.
 
     Uses PaddleX's OCR pipeline for text detection and recognition.
-    Supports multiple languages, model versions (v4/v5/v6), and both
+    Supports multiple languages, model versions (v4/v5), and both
     mobile (fast) and server (accurate) variants.
     """
 
-    # PP-OCR version: 'v4', 'v5', 'v6', etc.
+    # PP-OCR version: 'v4', 'v5', etc.
     PPOCR_VERSION = os.getenv('PPOCR_VERSION', 'v5')
 
     # Model configuration

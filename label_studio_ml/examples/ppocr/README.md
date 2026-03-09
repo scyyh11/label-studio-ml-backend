@@ -22,7 +22,7 @@ The [PP-OCR](https://github.com/PaddlePaddle/PaddleOCR) model connection integra
 
 ## Features
 
-- **Multiple Versions**: Currently supports PP-OCRv4 and PP-OCRv5, with future version support planned (configurable via `PPOCR_VERSION`)
+- **Multiple Versions**: This backend has been tested with PP-OCRv4 and PP-OCRv5, and is expected to work with future versions as long as the Python API remains compatible (configurable via `PPOCR_VERSION`)
 - **High Accuracy**: Achieves state-of-the-art performance on various OCR benchmarks
 - **Multi-language Support**: Supports 12 language families covering 100+ languages
 - **Two Model Variants**:
@@ -148,7 +148,7 @@ Set these in `docker-compose.yml` or via environment:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PPOCR_VERSION` | `v5` | PP-OCR version: `v4`, `v5` (currently available) |
+| `PPOCR_VERSION` | `v5` | PP-OCR version: `v4`, `v5` (tested; future versions expected to work) |
 | `MODEL_VARIANT` | `server` | `mobile` (fast) or `server` (accurate) |
 | `OCR_LANG` | `ch` | Language code (see table above) |
 | `DEVICE` | `cpu` | `cpu`, `gpu:0`, `gpu:1`, etc. |
