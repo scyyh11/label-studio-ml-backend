@@ -1,5 +1,5 @@
 """
-Tests for PP-OCRv5 ML Backend API.
+Tests for PP-OCR ML Backend API.
 
 To run these tests:
     pip install -r requirements-test.txt
@@ -7,13 +7,13 @@ To run these tests:
 """
 import pytest
 import json
-from model import PPOCRv5
+from model import PPOCR
 
 
 @pytest.fixture
 def client():
     from _wsgi import init_app
-    app = init_app(model_class=PPOCRv5)
+    app = init_app(model_class=PPOCR)
     app.config['TESTING'] = True
     with app.test_client() as client:
         yield client

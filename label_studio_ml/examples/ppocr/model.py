@@ -1,8 +1,9 @@
 """
-PP-OCRv5 ML Backend for Label Studio
+PP-OCR ML Backend for Label Studio
 
-This module implements a Label Studio ML backend using PaddleX's PP-OCRv5 pipeline
+This module implements a Label Studio ML backend using PaddleX's PP-OCR pipeline
 for text detection and recognition with support for 100+ languages.
+Supports PP-OCRv4, PP-OCRv5, and future versions.
 """
 
 import logging
@@ -22,13 +23,17 @@ from label_studio_sdk._extensions.label_studio_tools.core.utils.io import get_lo
 logger = logging.getLogger(__name__)
 
 
-class PPOCRv5(LabelStudioMLBase):
+class PPOCR(LabelStudioMLBase):
     """
-    PP-OCRv5 ML Backend for Label Studio.
+    PP-OCR ML Backend for Label Studio.
 
     Uses PaddleX's OCR pipeline for text detection and recognition.
-    Supports multiple languages and both mobile (fast) and server (accurate) variants.
+    Supports multiple languages, model versions (v4/v5/v6), and both
+    mobile (fast) and server (accurate) variants.
     """
+
+    # PP-OCR version: 'v4', 'v5', 'v6', etc.
+    PPOCR_VERSION = os.getenv('PPOCR_VERSION', 'v5')
 
     # Model configuration
     MODEL_VARIANT = os.getenv('MODEL_VARIANT', 'server')  # 'mobile' or 'server'
@@ -45,7 +50,7 @@ class PPOCRv5(LabelStudioMLBase):
     OUTPUT_TYPE = os.getenv('OUTPUT_TYPE', 'polygon')  # 'polygon' or 'rectangle'
     INCLUDE_TRANSCRIPTION = os.getenv('INCLUDE_TRANSCRIPTION', 'true').lower() == 'true'
 
-    # Document preprocessing options
+    # Document preprocessing options (disabled by default)
     USE_DOC_ORIENTATION = os.getenv('USE_DOC_ORIENTATION', 'false').lower() == 'true'
     USE_DOC_UNWARPING = os.getenv('USE_DOC_UNWARPING', 'false').lower() == 'true'
     USE_TEXTLINE_ORIENTATION = os.getenv('USE_TEXTLINE_ORIENTATION', 'false').lower() == 'true'
@@ -61,12 +66,12 @@ class PPOCRv5(LabelStudioMLBase):
     # Model directory for caching
     MODEL_DIR = os.getenv('MODEL_DIR', '.')
 
-    # Languages supported by base PP-OCRv5 model (both server and mobile variants)
-    # These use PP-OCRv5_{variant}_rec directly
+    # Languages supported by base PP-OCR model (both server and mobile variants)
+    # These use PP-OCR{version}_{variant}_rec directly
     BASE_MODEL_LANGUAGES = {'ch', 'en'}  # Chinese, English, Japanese, Traditional Chinese
 
     # Languages with dedicated mobile-only models
-    # These use {lang}_PP-OCRv5_mobile_rec
+    # These use {lang}_PP-OCR{version}_mobile_rec
     DEDICATED_MODEL_LANGUAGES = {
         'arabic',  # Arabic
         'cyrillic',  # Cyrillic (Russian, etc.)
@@ -89,13 +94,20 @@ class PPOCRv5(LabelStudioMLBase):
 
         from paddlex import create_pipeline
 
+        version = self.PPOCR_VERSION.lower()
+        # Normalize version string: accept both 'v5' and '5'
+        if not version.startswith('v'):
+            version = f'v{version}'
+        version_upper = version.upper()  # e.g., 'V5'
+        version_tag = f"PP-OCR{version_upper}"  # e.g., 'PP-OCRV5' -> maps to 'PP-OCRv5'
+        # PaddleX uses lowercase 'v' in model names: PP-OCRv5, PP-OCRv4
+        version_tag = f"PP-OCR{version}"  # e.g., 'PP-OCRv5'
+
         # Build recognition model name based on language and variant
         if self.LANG in self.BASE_MODEL_LANGUAGES:
-            # Chinese and English use the base PP-OCRv5 model (supports ch/en/ja/zh-TW)
-            rec_model = f"PP-OCRv5_{self.MODEL_VARIANT}_rec"
+            rec_model = f"{version_tag}_{self.MODEL_VARIANT}_rec"
         elif self.LANG in self.DEDICATED_MODEL_LANGUAGES:
-            # Other languages have dedicated mobile-only models
-            rec_model = f"{self.LANG}_PP-OCRv5_mobile_rec"
+            rec_model = f"{self.LANG}_{version_tag}_mobile_rec"
             if self.MODEL_VARIANT == 'server':
                 logger.warning(
                     f"Server variant not available for language '{self.LANG}'. "
@@ -104,17 +116,17 @@ class PPOCRv5(LabelStudioMLBase):
         else:
             # Unknown language - try base model with warning
             logger.warning(
-                f"Unknown language '{self.LANG}'. Using base PP-OCRv5 model."
+                f"Unknown language '{self.LANG}'. Using base {version_tag} model."
             )
-            rec_model = f"PP-OCRv5_{self.MODEL_VARIANT}_rec"
+            rec_model = f"{version_tag}_{self.MODEL_VARIANT}_rec"
 
         # Detection model based on variant
-        det_model = f"PP-OCRv5_{self.MODEL_VARIANT}_det"
+        det_model = f"{version_tag}_{self.MODEL_VARIANT}_det"
 
         # Determine if document preprocessor is needed
         use_doc_preprocessor = self.USE_DOC_ORIENTATION or self.USE_DOC_UNWARPING
 
-        logger.info(f"Initializing PP-OCRv5 pipeline:")
+        logger.info(f"Initializing {version_tag} pipeline:")
         logger.info(f"  Detection model: {det_model}")
         logger.info(f"  Recognition model: {rec_model}")
         logger.info(f"  Device: {self.DEVICE}")
@@ -181,11 +193,11 @@ class PPOCRv5(LabelStudioMLBase):
             logger.info(f"  Run mode: paddle (GPU)")
 
         self._pipeline = create_pipeline(config=config, device=self.DEVICE, pp_option=pp_option)
-        logger.info("PP-OCRv5 pipeline initialized successfully")
+        logger.info(f"{version_tag} pipeline initialized successfully")
 
     def setup(self):
         """Configure model parameters."""
-        self.set("model_version", f"PPOCRv5-{self.MODEL_VARIANT}-{self.LANG}-v0.0.1")
+        self.set("model_version", f"PPOCR{self.PPOCR_VERSION}-{self.MODEL_VARIANT}-{self.LANG}-v0.0.1")
 
     def _get_image_url(self, task: Dict, value: str) -> str:
         """
@@ -455,3 +467,7 @@ class PPOCRv5(LabelStudioMLBase):
             predictions=predictions,
             model_versions=self.get('model_version')
         )
+
+
+# Backward compatibility alias
+PPOCRv5 = PPOCR

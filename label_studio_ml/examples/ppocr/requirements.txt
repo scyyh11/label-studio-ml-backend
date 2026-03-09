@@ -5,5 +5,4 @@
 boto3>=1.28.0
 
 # Image processing
-opencv-python-headless>=4.9.0.80
-numpy<2
+opencv-python-headless>=4.12.0

@@ -1,33 +1,34 @@
 <!--
 ---
-title: PP-OCRv5 Text Detection and Recognition
+title: PP-OCR Text Detection and Recognition
 type: guide
 tier: all
 order: 41
 hide_menu: true
 hide_frontmatter_title: true
-meta_title: PP-OCRv5 model connection for text detection and recognition
-meta_description: The PP-OCRv5 model connection integrates PaddleX's OCR pipeline with Label Studio for high-accuracy text detection and recognition supporting 100+ languages.
+meta_title: PP-OCR model connection for text detection and recognition
+meta_description: The PP-OCR model connection integrates PaddleX's OCR pipeline with Label Studio for high-accuracy text detection and recognition supporting 100+ languages.
 categories:
     - Computer Vision
     - Optical Character Recognition
     - PaddleOCR
-image: "/guide/ml_tutorials/ppocr_v5.png"
+image: "/guide/ml_tutorials/ppocr.png"
 ---
 -->
 
-# PP-OCRv5 Model Connection
+# PP-OCR Model Connection
 
-The [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) model connection integrates PaddleX's state-of-the-art OCR pipeline with Label Studio. It provides high-accuracy text detection and recognition with support for 100+ languages.
+The [PP-OCR](https://github.com/PaddlePaddle/PaddleOCR) model connection integrates PaddleX's state-of-the-art OCR pipeline with Label Studio. It provides high-accuracy text detection and recognition with support for 100+ languages.
 
 ## Features
 
-- **High Accuracy**: PP-OCRv5 achieves state-of-the-art performance on various OCR benchmarks
+- **Multiple Versions**: Currently supports PP-OCRv4 and PP-OCRv5, with future version support planned (configurable via `PPOCR_VERSION`)
+- **High Accuracy**: Achieves state-of-the-art performance on various OCR benchmarks
 - **Multi-language Support**: Supports 12 language families covering 100+ languages
 - **Two Model Variants**:
   - `mobile`: Fast inference, suitable for real-time applications
   - `server`: Higher accuracy, suitable for batch processing
-- **Document Preprocessing**: Optional orientation detection and image unwarping
+- **Document Preprocessing**: Optional orientation detection and image unwarping (disabled by default)
 - **Flexible Output**: Polygon or rectangle bounding boxes
 
 ## Supported Languages
@@ -35,7 +36,7 @@ The [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) model connection integ
 | Code | Language | Notes |
 |------|----------|-------|
 | `ch` | Chinese (Simplified) | Server and mobile variants (includes Traditional Chinese, Japanese) |
-| `en` | English | Server and mobile variants (uses base PP-OCRv5 model) |
+| `en` | English | Server and mobile variants (uses base PP-OCR model) |
 | `arabic` | Arabic | Dedicated mobile model |
 | `cyrillic` | Cyrillic (Russian, etc.) | Dedicated mobile model |
 | `devanagari` | Devanagari (Hindi, etc.) | Dedicated mobile model |
@@ -51,11 +52,11 @@ The [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) model connection integ
 
 Before you begin, you must install the [Label Studio ML backend](https://github.com/HumanSignal/label-studio-ml-backend?tab=readme-ov-file#quickstart).
 
-This tutorial uses the `ppocr_v5` example.
+This tutorial uses the `ppocr` example.
 
 ## Labeling Configuration
 
-The PP-OCRv5 model connection works with the default OCR labeling configuration in Label Studio.
+The PP-OCR model connection works with the default OCR labeling configuration in Label Studio.
 
 ### Polygon + TextArea (Recommended)
 
@@ -102,7 +103,7 @@ The PP-OCRv5 model connection works with the default OCR labeling configuration 
 
 ## Running with Docker (Recommended)
 
-### GPU Version (CUDA 11.8)
+### CPU Version (Default)
 
 1. Start the ML backend:
 
@@ -117,16 +118,26 @@ curl http://localhost:9090/health
 # Expected: {"status":"UP"}
 ```
 
+### GPU Version (CUDA 11.8)
+
+```bash
+docker-compose -f docker-compose.gpu.yml up -d
+```
+
 ### GPU Version (CUDA 12.6)
 
 ```bash
-CUDA_VERSION=cuda12.6 docker-compose up -d
+CUDA_VERSION=cuda12.6 docker-compose -f docker-compose.gpu.yml up -d
 ```
 
-### CPU Version
+### Using a Different PP-OCR Version
 
 ```bash
-docker-compose -f docker-compose.cpu.yml up -d
+# Use PP-OCRv4
+PPOCR_VERSION=v4 docker-compose up -d
+
+# Use PP-OCRv5 (default)
+PPOCR_VERSION=v5 docker-compose up -d
 ```
 
 ## Configuration Options
@@ -137,9 +148,10 @@ Set these in `docker-compose.yml` or via environment:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `PPOCR_VERSION` | `v5` | PP-OCR version: `v4`, `v5` (currently available) |
 | `MODEL_VARIANT` | `server` | `mobile` (fast) or `server` (accurate) |
 | `OCR_LANG` | `ch` | Language code (see table above) |
-| `DEVICE` | `gpu:0` | `cpu`, `gpu:0`, `gpu:1`, etc. |
+| `DEVICE` | `cpu` | `cpu`, `gpu:0`, `gpu:1`, etc. |
 | `SCORE_THRESHOLD` | `0.5` | Recognition confidence threshold (0.0-1.0) |
 | `DET_SCORE_THRESHOLD` | `0.3` | Detection confidence threshold (0.0-1.0) |
 | `OUTPUT_TYPE` | `polygon` | `polygon` or `rectangle` |
@@ -180,7 +192,7 @@ MODEL_VARIANT=mobile OCR_LANG=en docker-compose up -d
 ### Korean OCR with CPU
 
 ```bash
-OCR_LANG=korean docker-compose -f docker-compose.cpu.yml up -d
+OCR_LANG=korean docker-compose up -d
 ```
 
 ### High-Accuracy Mode
@@ -189,32 +201,51 @@ OCR_LANG=korean docker-compose -f docker-compose.cpu.yml up -d
 MODEL_VARIANT=server SCORE_THRESHOLD=0.7 docker-compose up -d
 ```
 
+### Using PP-OCRv4 with GPU
+
+```bash
+PPOCR_VERSION=v4 docker-compose -f docker-compose.gpu.yml up -d
+```
+
 ## Building from Source
 
 ```bash
+# CPU
 docker-compose build
+
+# GPU
+docker-compose -f docker-compose.gpu.yml build
 ```
 
 ## Running Without Docker
 
-1. Install PaddlePaddle and PaddleX:
+1. Install PaddlePaddle following the [official guide](https://www.paddleocr.ai/latest/version3.x/installation.html):
 
 ```bash
-# GPU version
-pip install paddlepaddle-gpu paddlex
-
 # CPU version
-pip install paddlepaddle paddlex
+python -m pip install paddlepaddle==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+
+# GPU version (CUDA 11.8, requires driver >= 450.80.02)
+python -m pip install paddlepaddle-gpu==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cu118/
+
+# GPU version (CUDA 12.6, requires driver >= 550.54.14)
+python -m pip install paddlepaddle-gpu==3.2.0 -i https://www.paddlepaddle.org.cn/packages/stable/cu126/
 ```
 
-2. Install dependencies:
+2. Install PaddleOCR:
+
+```bash
+python -m pip install paddleocr
+```
+
+3. Install dependencies:
 
 ```bash
 pip install -r requirements-base.txt
 pip install -r requirements.txt
 ```
 
-3. Start the server:
+4. Start the server:
 
 ```bash
 python _wsgi.py
@@ -223,7 +254,7 @@ python _wsgi.py
 Or using label-studio-ml:
 
 ```bash
-label-studio-ml start ./ppocr_v5
+label-studio-ml start ./ppocr
 ```
 
 ## Connecting to Label Studio
@@ -231,7 +262,7 @@ label-studio-ml start ./ppocr_v5
 1. Open Label Studio and go to **Settings** > **Machine Learning**
 2. Click **Add Model**
 3. Enter:
-   - **Title**: `PP-OCRv5`
+   - **Title**: `PP-OCR`
    - **URL**: `http://localhost:9090` (or `http://host.docker.internal:9090` if Label Studio is in Docker)
 4. Click **Validate and Save**
 5. Optionally enable **Use for interactive preannotations**
@@ -265,12 +296,12 @@ pytest
 |-------|----------|
 | "Connection refused" | Verify backend is running: `docker-compose ps` |
 | "Can't resolve url" error | Set `LABEL_STUDIO_URL` environment variable (see Label Studio Connection section) |
-| No predictions returned | Check logs: `docker-compose logs ppocr_v5` |
+| No predictions returned | Check logs: `docker-compose logs ppocr` |
 | GPU not detected | Ensure NVIDIA drivers and nvidia-docker are installed |
 | Slow first prediction | Model downloads on first run; subsequent calls are faster |
 | Label Studio can't connect to ML backend | Use `http://host.docker.internal:9090` instead of `localhost` |
 | ML backend can't access Label Studio images | Set both `LABEL_STUDIO_URL` and `LABEL_STUDIO_API_KEY` |
-| Server variant unavailable | Server variant only supports Chinese (`ch`); use mobile for other languages |
+| Server variant unavailable | Server variant only supports Chinese (`ch`) and English (`en`); use mobile for other languages |
 | PIR/MKL-DNN error on Windows CPU | The model automatically uses `paddle_fp32` run mode to avoid this issue |
 
 ## Performance
@@ -284,14 +315,16 @@ pytest
 
 ## Customization
 
-The ML backend can be customized by modifying files in the `ppocr_v5/` directory:
+The ML backend can be customized by modifying files in this directory:
 
 - `model.py`: Main prediction logic
 - `_wsgi.py`: Server configuration
-- `docker-compose.yml`: Container settings
+- `docker-compose.yml`: Container settings (CPU)
+- `docker-compose.gpu.yml`: Container settings (GPU)
 
 ## References
 
 - [PaddleOCR GitHub](https://github.com/PaddlePaddle/PaddleOCR)
 - [PaddleX Documentation](https://paddlepaddle.github.io/PaddleX/)
+- [PaddleOCR Installation Guide](https://www.paddleocr.ai/latest/version3.x/installation.html)
 - [Label Studio ML Backend](https://github.com/HumanSignal/label-studio-ml-backend)

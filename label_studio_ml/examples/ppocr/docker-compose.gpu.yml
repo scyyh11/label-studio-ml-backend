@@ -1,25 +1,30 @@
 version: "3.8"
 
-# CPU-only configuration for PP-OCRv5 ML Backend
-# Use this if you don't have a GPU available
+# GPU configuration for PP-OCR ML Backend
+# Requires NVIDIA GPU with Docker nvidia-container-toolkit
 
 services:
-  ppocr_v5:
-    container_name: ppocr_v5
-    image: heartexlabs/label-studio-ml-backend:ppocr-v5-cpu
+  ppocr:
+    container_name: ppocr
+    image: heartexlabs/label-studio-ml-backend:ppocr-gpu
     init: true
     build:
       context: .
-      dockerfile: Dockerfile.cpu
+      dockerfile: Dockerfile.gpu
       args:
+        CUDA_VERSION: ${CUDA_VERSION:-cuda11.8}
         TEST_ENV: ${TEST_ENV:-false}
+        PADDLEPADDLE_VERSION: ${PADDLEPADDLE_VERSION:-3.0.0}
     environment:
+      # PP-OCR version: 'v4', 'v5', 'v6'
+      - PPOCR_VERSION=${PPOCR_VERSION:-v5}
+
       # Model selection
       - MODEL_VARIANT=${MODEL_VARIANT:-server}
       - OCR_LANG=${OCR_LANG:-ch}
 
-      # Device (CPU only)
-      - DEVICE=cpu
+      # Device configuration
+      - DEVICE=${DEVICE:-gpu:0}
 
       # Score thresholds
       - SCORE_THRESHOLD=${SCORE_THRESHOLD:-0.5}
@@ -29,7 +34,7 @@ services:
       - OUTPUT_TYPE=${OUTPUT_TYPE:-polygon}
       - INCLUDE_TRANSCRIPTION=${INCLUDE_TRANSCRIPTION:-true}
 
-      # Document preprocessing
+      # Document preprocessing (disabled by default)
       - USE_DOC_ORIENTATION=${USE_DOC_ORIENTATION:-false}
       - USE_DOC_UNWARPING=${USE_DOC_UNWARPING:-false}
       - USE_TEXTLINE_ORIENTATION=${USE_TEXTLINE_ORIENTATION:-false}
@@ -45,7 +50,6 @@ services:
       - BASIC_AUTH_PASS=${BASIC_AUTH_PASS:-}
 
       # Label Studio connection (required for accessing uploaded images)
-      # Get API key from Label Studio: Account & Settings -> Access Token
       - LABEL_STUDIO_URL=${LABEL_STUDIO_URL:-http://host.docker.internal:8080}
       - LABEL_STUDIO_API_KEY=${LABEL_STUDIO_API_KEY:-your_token_here}
 
@@ -54,3 +58,10 @@ services:
     volumes:
       - "./data/server:/data"
       - "./data/.file-cache:/data/models/.file-cache"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

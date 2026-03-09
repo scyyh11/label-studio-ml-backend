@@ -30,7 +30,7 @@ logging.config.dictConfig({
 })
 
 from label_studio_ml.api import init_app
-from model import PPOCRv5
+from model import PPOCR
 
 
 _DEFAULT_CONFIG_PATH = os.path.join(os.path.dirname(__file__), 'config.json')
@@ -46,7 +46,7 @@ def get_kwargs_from_config(config_path=_DEFAULT_CONFIG_PATH):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='PP-OCRv5 ML Backend for Label Studio')
+    parser = argparse.ArgumentParser(description='PP-OCR ML Backend for Label Studio')
     parser.add_argument(
         '-p', '--port', dest='port', type=int, default=9090,
         help='Server port')
@@ -111,11 +111,11 @@ if __name__ == "__main__":
         kwargs.update(parse_kwargs())
 
     if args.check:
-        print('Check "' + PPOCRv5.__name__ + '" instance creation..')
-        model = PPOCRv5(**kwargs)
+        print('Check "' + PPOCR.__name__ + '" instance creation..')
+        model = PPOCR(**kwargs)
 
     app = init_app(
-        model_class=PPOCRv5,
+        model_class=PPOCR,
         basic_auth_user=args.basic_auth_user,
         basic_auth_pass=args.basic_auth_pass
     )
@@ -124,4 +124,4 @@ if __name__ == "__main__":
 
 else:
     # For uWSGI/gunicorn use
-    app = init_app(model_class=PPOCRv5)
+    app = init_app(model_class=PPOCR)

@@ -1,28 +1,15 @@
 # syntax=docker/dockerfile:1
-# PP-OCRv5 ML Backend for Label Studio
+# PP-OCR ML Backend for Label Studio (CPU version)
 #
-# This Dockerfile uses the official PaddleX Docker image which includes
+# Uses the official PaddleX Docker image which includes
 # PaddlePaddle and PaddleX pre-installed.
 #
 # Build arguments:
-#   CUDA_VERSION: cuda11.8 (default) or cuda12.6
 #   TEST_ENV: Set to "true" to install test dependencies
 
-ARG CUDA_VERSION=cuda11.8
-
-# GPU with CUDA 11.8 (default)
-FROM ccr-2vdh3abv-pub.cnc.bj.baidubce.com/paddlex/paddlex:paddlex3.1.2-paddlepaddle3.0.0-gpu-cuda11.8-cudnn8.9-trt8.6 AS gpu-cuda11.8
-
-# GPU with CUDA 12.6
-FROM ccr-2vdh3abv-pub.cnc.bj.baidubce.com/paddlex/paddlex:paddlex3.1.2-paddlepaddle3.0.0-gpu-cuda12.6-cudnn9.5-trt10.5 AS gpu-cuda12.6
-
-# CPU only
-FROM ccr-2vdh3abv-pub.cnc.bj.baidubce.com/paddlex/paddlex:paddlex3.1.2-paddlepaddle3.0.0-cpu AS cpu
-
-# Select the appropriate base image
-FROM gpu-${CUDA_VERSION} AS base
-
 ARG TEST_ENV
+
+FROM ccr-2vdh3abv-pub.cnc.bj.baidubce.com/paddlex/paddlex:paddlex3.1.2-paddlepaddle3.0.0-cpu
 
 WORKDIR /app
 
@@ -31,7 +18,8 @@ ENV PYTHONUNBUFFERED=1 \
     PORT=9090 \
     PIP_CACHE_DIR=/.cache \
     WORKERS=1 \
-    THREADS=8
+    THREADS=8 \
+    DEVICE=cpu
 
 # Install base requirements (label-studio-ml and gunicorn)
 COPY requirements-base.txt .
@@ -48,6 +36,7 @@ RUN --mount=type=cache,target=${PIP_CACHE_DIR},sharing=locked \
     pip install -r requirements.txt
 
 # Install test requirements if needed
+ARG TEST_ENV
 COPY requirements-test.txt .
 RUN --mount=type=cache,target=${PIP_CACHE_DIR},sharing=locked \
     if [ "$TEST_ENV" = "true" ]; then \
