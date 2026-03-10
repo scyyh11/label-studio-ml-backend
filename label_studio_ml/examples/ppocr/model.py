@@ -98,8 +98,6 @@ class PPOCR(LabelStudioMLBase):
         # Normalize version string: accept both 'v5' and '5'
         if not version.startswith('v'):
             version = f'v{version}'
-        version_upper = version.upper()  # e.g., 'V5'
-        version_tag = f"PP-OCR{version_upper}"  # e.g., 'PP-OCRV5' -> maps to 'PP-OCRv5'
         # PaddleX uses lowercase 'v' in model names: PP-OCRv5, PP-OCRv4
         version_tag = f"PP-OCR{version}"  # e.g., 'PP-OCRv5'
 
@@ -211,6 +209,11 @@ class PPOCR(LabelStudioMLBase):
             The resolved image URL.
         """
         image_url = task['data'].get(value) or task['data'].get(DATA_UNDEFINED_NAME)
+        if not image_url:
+            raise ValueError(
+                f"Could not find image data in task {task.get('id')} "
+                f"(looked for key '{value}' and '{DATA_UNDEFINED_NAME}')"
+            )
 
         if image_url.startswith('s3://'):
             # Generate presigned URL for S3

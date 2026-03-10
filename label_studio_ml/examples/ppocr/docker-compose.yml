@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   ppocr:
     container_name: ppocr
@@ -10,7 +8,6 @@ services:
       dockerfile: Dockerfile
       args:
         TEST_ENV: ${TEST_ENV:-false}
-        PADDLEPADDLE_VERSION: ${PADDLEPADDLE_VERSION:-3.0.0}
     environment:
       # PP-OCR version: 'v4', 'v5'
       - PPOCR_VERSION=${PPOCR_VERSION:-v5}
